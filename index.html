@@ -94,13 +94,13 @@
     }
 
     .speed-digits {
-      font-size: clamp(5.25rem, 23vmin, 13.5rem);
+      font-size: clamp(5.5rem, 24vmin, 14rem);
       line-height: 0.92;
       letter-spacing: -0.04em;
     }
 
     .secondary-digits {
-      font-size: clamp(2rem, 7.2vmin, 4.25rem);
+      font-size: clamp(1.9rem, 7vmin, 4.25rem);
       line-height: 1.05;
       letter-spacing: -0.02em;
     }
@@ -112,6 +112,7 @@
         grid-template-columns: 1.35fr 1fr;
         gap: 0.85rem;
         align-items: stretch;
+        flex: 1;
       }
       .secondary-telemetry-grid {
         display: flex;
@@ -120,7 +121,7 @@
         gap: 0.85rem;
       }
       .speed-digits {
-        font-size: clamp(4.5rem, 28vh, 10rem);
+        font-size: clamp(4.5rem, 29vh, 10.5rem);
       }
       .secondary-digits {
         font-size: clamp(1.65rem, 9.5vh, 3rem);
@@ -131,18 +132,18 @@
       .main-telemetry-grid {
         display: flex;
         flex-direction: column;
-        gap: 1rem;
+        gap: 0.9rem;
         flex: 1;
         justify-content: center;
       }
       .secondary-telemetry-grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.85rem;
+        gap: 0.75rem;
       }
     }
 
-    @media (max-width: 380px) {
+    @media (max-width: 370px) {
       .secondary-telemetry-grid {
         grid-template-columns: 1fr;
       }
@@ -162,11 +163,11 @@
 
   <div id="hudContainer" class="app-shell max-w-6xl mx-auto w-full gap-3 py-3 px-3 sm:px-5">
     
-    <!-- TOP STATUS & QUICK CONTROLS BAR -->
-    <header class="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-900 pb-2.5">
-      <!-- Left: GNSS Signal Status -->
-      <div class="flex items-center gap-2 flex-wrap">
-        <button id="btnGnssToggle" type="button" class="oled-pill px-3 py-1.5 rounded-full flex items-center gap-2 text-xs font-semibold tracking-wider uppercase" title="Tap to reconnect or refresh GNSS receiver">
+    <!-- TOP STATUS & QUICK CONTROLS BAR (2 Clean Rows on Mobile, 1 Row on Wide) -->
+    <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-neutral-900 pb-2.5">
+      <!-- Row 1: Primary GNSS Lock, Accuracy & Always-On Wake Lock -->
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <button id="btnGnssToggle" type="button" class="oled-pill px-3 py-1.5 rounded-full flex items-center gap-2 text-xs font-semibold tracking-wider uppercase" title="Tap to request or refresh GNSS location">
           <span id="gnssDot" class="w-2.5 h-2.5 rounded-full bg-amber-400 pulse-live"></span>
           <span id="gnssStatusText">GNSS ACQUIRING</span>
         </button>
@@ -184,10 +185,13 @@
         </button>
       </div>
 
-      <!-- Right: Utility Controls -->
+      <!-- Row 2 (Underneath GNSS Lock on Portrait): Fix Rate / Signal Info + HUD + Fullscreen + Menu -->
       <div class="flex items-center gap-1.5 flex-wrap">
-        <button id="btnDemoMode" type="button" class="oled-pill px-3 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase text-neutral-300" title="Simulate realistic GNSS movement indoors">
-          DEMO: OFF
+        <button id="btnFixInfo" type="button" class="oled-pill px-3 py-1.5 rounded-full text-xs font-mono-tabular font-semibold text-neutral-300 flex items-center gap-1.5" title="Tap for GNSS satellite & fix details">
+          <svg class="w-3.5 h-3.5 accent-text" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.348 14.652a3.75 3.75 0 0 1 0-5.304m5.304 0a3.75 3.75 0 0 1 0 5.304m-7.425 2.121a6.75 6.75 0 0 1 0-9.546m9.546 0a6.75 6.75 0 0 1 0 9.546M5.106 18.894c-3.808-3.807-3.808-9.98 0-13.788m13.788 0c3.808 3.807 3.808 9.98 0 13.788M12 12h.008v.008H12V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+          </svg>
+          <span id="fixRateText">FIX: -- Hz</span>
         </button>
 
         <button id="btnMirrorHud" type="button" class="oled-pill px-2.5 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase text-neutral-300" title="Flip screen horizontally for windshield HUD reflection">
@@ -200,7 +204,7 @@
           </svg>
         </button>
 
-        <button id="btnOpenSettings" type="button" class="oled-pill px-2.5 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase text-neutral-300 flex items-center gap-1" title="Units, OLED Color Theme & PWA Install Guide">
+        <button id="btnOpenSettings" type="button" class="oled-pill px-2.5 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase text-neutral-300 flex items-center gap-1" title="Units, OLED Color Theme & Settings">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
           </svg>
@@ -209,42 +213,39 @@
       </div>
     </header>
 
-    <!-- DEMO SIMULATOR SLIDER BAR (Visible only when Demo Mode is active) -->
-    <div id="demoControlBar" class="hidden bg-neutral-950 border border-neutral-800 rounded-xl px-3.5 py-2 flex flex-wrap items-center justify-between gap-3 text-xs">
-      <div class="flex items-center gap-2">
-        <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold uppercase tracking-wider">GNSS Simulator</span>
-        <span class="text-neutral-400 hidden sm:inline">Adjust simulated speed or let autopilot cruise:</span>
+    <!-- INSECURE CONTEXT (content:// or file://) WARNING BANNER -->
+    <div id="insecureOriginBanner" class="hidden bg-amber-950/70 border border-amber-500/60 rounded-2xl p-3.5 text-xs text-amber-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div class="space-y-1">
+        <div class="font-bold text-amber-300 flex items-center gap-1.5">
+          <span>⚠️ Opened via Local File (<code id="currentProtocolLabel" class="font-mono-tabular">content://</code>)</span>
+        </div>
+        <p class="text-amber-100/90 leading-relaxed">
+          Android Chrome blocks GPS permission prompts on local <code class="font-mono-tabular">content://</code> and <code class="font-mono-tabular">file://</code> files. Open via your GitHub Pages <code class="font-mono-tabular">https://</code> link for live GNSS.
+        </p>
       </div>
-      <div class="flex items-center gap-3 flex-1 max-w-md">
-        <button id="btnDemoAuto" type="button" class="oled-pill active-pill px-2.5 py-1 rounded text-xs font-semibold">AUTO CRUISE</button>
-        <input id="demoSpeedSlider" type="range" min="0" max="65" step="0.5" value="29" class="w-full accent-emerald-400 cursor-pointer" aria-label="Simulated speed meters per second" />
-      </div>
+      <button id="btnDismissInsecure" type="button" class="oled-pill px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-200 whitespace-nowrap">
+        GOT IT
+      </button>
     </div>
 
     <!-- MAIN TELEMETRY AREA: AUTO-ROTATE GRID -->
     <main class="main-telemetry-grid my-auto">
       
       <!-- PRIMARY CENTER DISPLAY: LARGE GNSS SPEED -->
-      <section id="cardSpeed" role="button" tabindex="0" aria-label="Speed Display. Tap to cycle speed units." class="oled-card rounded-3xl p-4 sm:p-6 flex flex-col justify-between items-center relative overflow-hidden cursor-pointer flex-1 min-h-[240px]">
+      <section id="cardSpeed" role="button" tabindex="0" aria-label="Speed Display. Tap to cycle speed units." class="oled-card rounded-3xl p-4 sm:p-6 flex flex-col justify-between items-center relative overflow-hidden cursor-pointer flex-1 min-h-[250px]">
         
         <!-- Top Row inside Speed Card -->
         <div class="w-full flex items-center justify-between text-xs uppercase tracking-widest text-neutral-400 font-semibold">
-          <div class="flex items-center gap-2">
-            <span>GNSS GROUND SPEED</span>
-            <span id="speedSourceBadge" class="text-[10px] px-2 py-0.5 rounded bg-neutral-900 text-neutral-400 border border-neutral-800">DOPPLER</span>
-          </div>
-          <div class="flex items-center gap-1.5 text-neutral-400">
-            <span class="text-[11px] text-neutral-500">TAP TO CYCLE UNIT</span>
-            <span id="speedUnitPill" class="px-2.5 py-0.5 rounded-full bg-neutral-900 border border-neutral-700 text-white font-mono-tabular font-bold">MPH</span>
-          </div>
+          <span>GNSS GROUND SPEED</span>
+          <span id="speedUnitPill" class="px-2.5 py-0.5 rounded-full bg-neutral-900 border border-neutral-700 text-white font-mono-tabular font-bold">MPH</span>
         </div>
 
         <!-- Huge Center Digits -->
-        <div class="my-auto py-2 sm:py-4 flex flex-col items-center justify-center text-center">
+        <div class="my-auto py-3 sm:py-5 flex flex-col items-center justify-center text-center">
           <div id="speedValue" class="speed-digits font-mono-tabular font-extrabold accent-text accent-glow select-none">
             0
           </div>
-          <div class="mt-1 flex items-center gap-3">
+          <div class="mt-2 flex items-center gap-3">
             <span id="speedUnitLabel" class="text-lg sm:text-2xl font-extrabold tracking-widest uppercase text-neutral-200">MPH</span>
             <button id="btnDecimalToggle" type="button" class="oled-pill px-2.5 py-0.5 rounded text-[11px] font-mono-tabular text-neutral-400 hover:text-white" title="Toggle whole number or 0.1 decimal precision">
               .0 OFF
@@ -278,28 +279,28 @@
       <div class="secondary-telemetry-grid">
         
         <!-- HEADING CARD -->
-        <section id="cardHeading" role="button" tabindex="0" aria-label="Heading Display. Tap to toggle degrees or cardinal direction." class="oled-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between cursor-pointer">
-          <div class="flex items-center justify-between text-xs uppercase tracking-widest text-neutral-400 font-semibold">
-            <span>HEADING (COG)</span>
-            <span id="headingFormatBadge" class="px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-[11px] font-mono-tabular text-neutral-300">DEG + CARD</span>
+        <section id="cardHeading" role="button" tabindex="0" aria-label="Heading Display. Tap to toggle degrees or cardinal direction." class="oled-card rounded-2xl p-3.5 sm:p-5 flex flex-col justify-between cursor-pointer">
+          <div class="flex items-center justify-between gap-1 text-xs uppercase tracking-wider text-neutral-400 font-semibold">
+            <span>HEADING</span>
+            <span id="headingFormatBadge" class="px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-[10px] font-mono-tabular text-neutral-300 whitespace-nowrap">DEG + CARD</span>
           </div>
 
-          <div class="my-auto py-3 flex items-center justify-between gap-3">
-            <div class="flex flex-col">
-              <div class="flex items-baseline gap-2.5 flex-wrap">
+          <div class="my-auto py-2.5 flex items-center justify-between gap-2">
+            <div class="flex flex-col min-w-0">
+              <div class="flex items-baseline gap-2 flex-wrap">
                 <span id="headingPrimary" class="secondary-digits font-mono-tabular font-bold text-white">---°</span>
-                <span id="headingSecondary" class="text-xl sm:text-2xl font-extrabold tracking-wider accent-text">--</span>
+                <span id="headingSecondary" class="text-lg sm:text-2xl font-extrabold tracking-wider accent-text">--</span>
               </div>
-              <span id="headingSubtext" class="text-xs text-neutral-400 mt-1 font-mono-tabular">Awaiting motion (&gt;1.5 mph)</span>
+              <span id="headingSubtext" class="text-[11px] text-neutral-400 mt-1 font-mono-tabular leading-tight">Awaiting motion</span>
             </div>
 
             <!-- Crisp SVG Compass Rose -->
-            <div class="relative w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0 flex items-center justify-center rounded-full border border-neutral-800 bg-black">
-              <span class="absolute top-0.5 text-[9px] font-bold text-neutral-400">N</span>
-              <span class="absolute bottom-0.5 text-[9px] font-bold text-neutral-600">S</span>
-              <span class="absolute right-1 text-[9px] font-bold text-neutral-600">E</span>
-              <span class="absolute left-1 text-[9px] font-bold text-neutral-600">W</span>
-              <svg id="compassArrow" class="w-9 h-9 transition-transform duration-300 ease-out" style="transform: rotate(0deg);" viewBox="0 0 24 24" fill="none">
+            <div class="relative w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0 flex items-center justify-center rounded-full border border-neutral-800 bg-black">
+              <span class="absolute top-0.5 text-[8px] font-bold text-neutral-400">N</span>
+              <span class="absolute bottom-0.5 text-[8px] font-bold text-neutral-600">S</span>
+              <span class="absolute right-1 text-[8px] font-bold text-neutral-600">E</span>
+              <span class="absolute left-1 text-[8px] font-bold text-neutral-600">W</span>
+              <svg id="compassArrow" class="w-8 h-8 sm:w-9 sm:h-9 transition-transform duration-300 ease-out" style="transform: rotate(0deg);" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2L16 14H8L12 2Z" fill="var(--accent)" />
                 <path d="M12 22L8 14H16L12 22Z" fill="#333333" />
                 <circle cx="12" cy="14" r="2" fill="#000000" />
@@ -308,78 +309,51 @@
           </div>
 
           <div class="flex items-center justify-between text-[11px] text-neutral-400 font-mono-tabular border-t border-neutral-900 pt-2">
-            <span>TAP TO SWITCH FORMAT</span>
-            <span id="headingCardinalFull" class="text-neutral-300">True North Ref</span>
+            <span id="headingCardinalFull" class="text-neutral-300 truncate">True North Ref</span>
           </div>
         </section>
 
         <!-- ALTITUDE CARD -->
-        <section id="cardAltitude" role="button" tabindex="0" aria-label="Altitude Display. Tap to toggle feet or meters." class="oled-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between cursor-pointer">
-          <div class="flex items-center justify-between text-xs uppercase tracking-widest text-neutral-400 font-semibold">
-            <span>GNSS ALTITUDE</span>
-            <span id="altUnitBadge" class="px-2.5 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-[11px] font-mono-tabular text-white font-bold">FEET (FT)</span>
+        <section id="cardAltitude" role="button" tabindex="0" aria-label="Altitude Display. Tap to toggle feet or meters." class="oled-card rounded-2xl p-3.5 sm:p-5 flex flex-col justify-between cursor-pointer">
+          <div class="flex items-center justify-between gap-1 text-xs uppercase tracking-wider text-neutral-400 font-semibold">
+            <span>ALTITUDE</span>
+            <span id="altUnitBadge" class="px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-[10px] font-mono-tabular text-white font-bold whitespace-nowrap">FEET (FT)</span>
           </div>
 
-          <div class="my-auto py-3 flex items-center justify-between gap-3">
-            <div class="flex flex-col">
-              <div class="flex items-baseline gap-2">
+          <div class="my-auto py-2.5 flex items-center justify-between gap-2">
+            <div class="flex flex-col min-w-0">
+              <div class="flex items-baseline gap-1.5">
                 <span id="altitudeValue" class="secondary-digits font-mono-tabular font-bold text-white">---</span>
-                <span id="altitudeUnitLabel" class="text-lg sm:text-xl font-bold uppercase accent-text">FT</span>
+                <span id="altitudeUnitLabel" class="text-base sm:text-xl font-bold uppercase accent-text">FT</span>
               </div>
-              <span id="altitudeAccText" class="text-xs text-neutral-400 mt-1 font-mono-tabular">Vert Acc: ± ---</span>
+              <span id="altitudeAccText" class="text-[11px] text-neutral-400 mt-1 font-mono-tabular whitespace-nowrap">V-Acc: ± ---</span>
             </div>
 
-            <!-- Elevation Icon & Min/Max Pill -->
-            <div class="flex flex-col items-end text-right font-mono-tabular text-xs text-neutral-400 space-y-1">
-              <div class="px-2 py-0.5 rounded bg-neutral-950 border border-neutral-800">
+            <!-- Min/Max Pill Stack (nowrap so units never wrap onto a second line) -->
+            <div class="flex flex-col items-end text-right font-mono-tabular text-[11px] text-neutral-400 space-y-1 flex-shrink-0">
+              <div class="px-2 py-0.5 rounded bg-neutral-950 border border-neutral-800 whitespace-nowrap">
                 <span class="text-neutral-500">MAX </span>
                 <span id="altMaxVal" class="text-neutral-200 font-semibold">---</span>
               </div>
-              <div class="px-2 py-0.5 rounded bg-neutral-950 border border-neutral-800">
+              <div class="px-2 py-0.5 rounded bg-neutral-950 border border-neutral-800 whitespace-nowrap">
                 <span class="text-neutral-500">MIN </span>
                 <span id="altMinVal" class="text-neutral-200 font-semibold">---</span>
               </div>
             </div>
           </div>
 
-          <div class="flex items-center justify-between text-[11px] text-neutral-400 font-mono-tabular border-t border-neutral-900 pt-2">
-            <span>TAP TO TOGGLE FT / M</span>
-            <span id="coordsFooter" class="text-neutral-300 truncate max-w-[175px]">LAT/LON: ---</span>
+          <!-- Full-width Northings & Eastings (Latitude & Longitude) so Eastings are never cut off -->
+          <div class="flex items-center justify-between text-[11px] text-neutral-300 font-mono-tabular border-t border-neutral-900 pt-2">
+            <span id="coordsFooter" class="w-full text-left tracking-tight whitespace-nowrap overflow-x-auto">LAT/LON: ---</span>
           </div>
         </section>
 
       </div>
     </main>
 
-    <!-- BOTTOM QUICK UNIT & THEME BAR -->
-    <footer class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-neutral-900 text-xs">
-      <!-- Direct Speed Unit Switcher -->
-      <div class="flex items-center gap-1 flex-wrap">
-        <span class="text-[11px] text-neutral-400 uppercase tracking-wider mr-1 font-semibold">SPEED:</span>
-        <button type="button" data-speed-unit="mph" class="speed-unit-btn oled-pill active-pill px-2.5 py-1 rounded-lg font-mono-tabular font-semibold">MPH</button>
-        <button type="button" data-speed-unit="kmh" class="speed-unit-btn oled-pill px-2.5 py-1 rounded-lg font-mono-tabular font-semibold text-neutral-400">KM/H</button>
-        <button type="button" data-speed-unit="knots" class="speed-unit-btn oled-pill px-2.5 py-1 rounded-lg font-mono-tabular font-semibold text-neutral-400">KTS</button>
-        <button type="button" data-speed-unit="ms" class="speed-unit-btn oled-pill px-2.5 py-1 rounded-lg font-mono-tabular font-semibold text-neutral-400">M/S</button>
-      </div>
-
-      <!-- Direct Altitude Unit Switcher -->
-      <div class="flex items-center gap-1">
-        <span class="text-[11px] text-neutral-400 uppercase tracking-wider mr-1 font-semibold">ALT:</span>
-        <button type="button" data-alt-unit="ft" class="alt-unit-btn oled-pill active-pill px-2.5 py-1 rounded-lg font-mono-tabular font-semibold">FT</button>
-        <button type="button" data-alt-unit="m" class="alt-unit-btn oled-pill px-2.5 py-1 rounded-lg font-mono-tabular font-semibold text-neutral-400">M</button>
-      </div>
-
-      <!-- Timestamp / Fix Rate -->
-      <div class="text-[11px] font-mono-tabular text-neutral-400 hidden sm:flex items-center gap-2">
-        <span id="fixRateText">FIX: -- Hz</span>
-        <span>•</span>
-        <span id="lastUpdateTime">LAST: --:--:--</span>
-      </div>
-    </footer>
-
   </div>
 
-  <!-- SETTINGS & PWA INSTALL MODAL -->
+  <!-- SETTINGS & CONFIGURATION MODAL -->
   <div id="settingsModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-neutral-950 border border-neutral-800 rounded-3xl max-w-lg w-full p-5 sm:p-6 space-y-5 max-h-[90dvh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-neutral-800 pb-3">
@@ -460,23 +434,19 @@
         </button>
       </div>
 
-      <!-- Install on Pixel 9 Pro XL Instructions -->
+      <!-- Telemetry & Copy Source -->
       <div class="p-4 rounded-2xl bg-neutral-900/60 border border-neutral-800 space-y-2.5 text-xs">
-        <div class="font-bold text-white flex items-center gap-2">
-          <svg class="w-4 h-4 accent-text" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
-          </svg>
-          <span>Install as Standalone App on Pixel 9 Pro XL</span>
+        <div class="flex items-center justify-between text-neutral-300 font-mono-tabular">
+          <span>LAST GNSS UPDATE:</span>
+          <span id="lastUpdateTime" class="text-white font-semibold">--:--:--</span>
         </div>
-        <ol class="list-decimal list-inside text-neutral-300 space-y-1 leading-relaxed">
-          <li>Tap <strong>Download Standalone PWA (.html)</strong> below or host this single file via GitHub Pages / local server.</li>
-          <li>Open in <strong>Chrome on your Pixel 9 Pro XL</strong> and allow <strong>Precise Location</strong>.</li>
-          <li>Tap the Chrome menu (<strong>⋮</strong>) → <strong>Add to Home screen</strong> (or <strong>Install app</strong>) for fullscreen OLED launch with automatic screen Wake Lock.</li>
-        </ol>
+        <p class="text-neutral-400 leading-relaxed text-[11px]">
+          Note: Web browsers do not expose raw satellite counts (<code class="font-mono-tabular">GnssStatus</code>) to web pages for privacy reasons; the top pill shows live GNSS Fix Frequency (<code class="font-mono-tabular">Hz</code>) and 3D/2D lock state.
+        </p>
         <div class="pt-1 flex flex-wrap gap-2">
           <button id="btnDownloadHtml" type="button" class="oled-pill active-pill px-3.5 py-2 rounded-xl font-semibold text-xs flex items-center gap-1.5">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
             <span>Download Standalone PWA (.html)</span>
           </button>
@@ -489,7 +459,7 @@
   </div>
 
   <!-- TOAST NOTIFICATION -->
-  <div id="toastBanner" class="fixed bottom-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-opacity duration-200 bg-neutral-900 border border-neutral-700 text-white px-4 py-2 rounded-full text-xs font-semibold shadow-2xl">
+  <div id="toastBanner" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-opacity duration-200 bg-neutral-900 border border-neutral-700 text-white px-4 py-2 rounded-full text-xs font-semibold shadow-2xl">
     Unit updated
   </div>
 
@@ -505,7 +475,7 @@
         mirrored: false,
         accentColor: '#00ff66',
 
-        // Live / Simulated GNSS Telemetry (SI units internally: m/s, meters, degrees)
+        // Live GNSS Telemetry (SI units internally: m/s, meters, degrees)
         speedMs: 0,
         maxSpeedMs: 0,
         headingDeg: null,
@@ -517,23 +487,18 @@
         vertAccM: null,
         lat: null,
         lon: null,
-        speedSource: 'DOPPLER', // 'DOPPLER' | 'CALC' | 'SIM'
+        fixHz: null,
 
-        // Previous Fix for Haversine fallback when Doppler speed/heading is null
+        // Previous Fix for geodesic fallback when speed/heading is null
         prevFix: null,
         fixIntervalsMs: [],
 
-        // Watch / Demo handles
+        // Watch handle
         watchId: null,
-        demoActive: false,
-        demoAutoCruise: true,
-        demoTimer: null,
-        demoPhase: 0,
 
         // Wake Lock
         wakeLockWanted: true,
-        wakeLockSentinel: null,
-        keepAwakeTimer: null
+        wakeLockSentinel: null
       };
 
       // Load saved preferences safely
@@ -545,9 +510,7 @@
         if (typeof saved.showDecimals === 'boolean') state.showDecimals = saved.showDecimals;
         if (typeof saved.driftFilter === 'boolean') state.driftFilter = saved.driftFilter;
         if (saved.accentColor) state.accentColor = saved.accentColor;
-      } catch (e) {
-        // Ignore storage restrictions in sandboxed iframes
-      }
+      } catch (e) {}
 
       function savePrefs() {
         try {
@@ -570,19 +533,19 @@
       const accReadout = document.getElementById('accReadout');
       const btnWakeLock = document.getElementById('btnWakeLock');
       const wakeLockText = document.getElementById('wakeLockText');
-      const btnDemoMode = document.getElementById('btnDemoMode');
+      const btnFixInfo = document.getElementById('btnFixInfo');
+      const fixRateText = document.getElementById('fixRateText');
       const btnMirrorHud = document.getElementById('btnMirrorHud');
       const btnFullscreen = document.getElementById('btnFullscreen');
       const btnOpenSettings = document.getElementById('btnOpenSettings');
       const btnCloseSettings = document.getElementById('btnCloseSettings');
       const settingsModal = document.getElementById('settingsModal');
 
-      const demoControlBar = document.getElementById('demoControlBar');
-      const btnDemoAuto = document.getElementById('btnDemoAuto');
-      const demoSpeedSlider = document.getElementById('demoSpeedSlider');
+      const insecureOriginBanner = document.getElementById('insecureOriginBanner');
+      const currentProtocolLabel = document.getElementById('currentProtocolLabel');
+      const btnDismissInsecure = document.getElementById('btnDismissInsecure');
 
       const cardSpeed = document.getElementById('cardSpeed');
-      const speedSourceBadge = document.getElementById('speedSourceBadge');
       const speedUnitPill = document.getElementById('speedUnitPill');
       const speedValue = document.getElementById('speedValue');
       const speedUnitLabel = document.getElementById('speedUnitLabel');
@@ -610,7 +573,6 @@
       const altMinVal = document.getElementById('altMinVal');
       const coordsFooter = document.getElementById('coordsFooter');
 
-      const fixRateText = document.getElementById('fixRateText');
       const lastUpdateTime = document.getElementById('lastUpdateTime');
 
       const selectSpeedUnit = document.getElementById('selectSpeedUnit');
@@ -621,9 +583,22 @@
       const btnInstallPwaPrompt = document.getElementById('btnInstallPwaPrompt');
       const toastBanner = document.getElementById('toastBanner');
 
-      const speedUnitBtns = document.querySelectorAll('.speed-unit-btn');
-      const altUnitBtns = document.querySelectorAll('.alt-unit-btn');
       const themeColorBtns = document.querySelectorAll('.theme-color-btn');
+
+      // --- CHECK PROTOCOL / SECURE CONTEXT ---
+      function isLocalFileProtocol() {
+        const proto = window.location.protocol;
+        return proto === 'content:' || proto === 'file:' || !window.isSecureContext;
+      }
+
+      if (isLocalFileProtocol()) {
+        currentProtocolLabel.textContent = window.location.protocol + '//';
+        insecureOriginBanner.classList.remove('hidden');
+      }
+
+      btnDismissInsecure.addEventListener('click', () => {
+        insecureOriginBanner.classList.add('hidden');
+      });
 
       // --- TOAST HELPER ---
       let toastTimeout = null;
@@ -635,7 +610,7 @@
         toastTimeout = setTimeout(() => {
           toastBanner.classList.remove('opacity-100');
           toastBanner.classList.add('opacity-0');
-        }, 1600);
+        }, 2200);
       }
 
       // --- UNIT CONVERSIONS ---
@@ -672,7 +647,6 @@
         return CARDINALS_16[idx];
       }
 
-      // Haversine distance (meters) and initial bearing (degrees) fallback
       function computeGeodesic(lat1, lon1, lat2, lon2) {
         const R = 6371000;
         const toRad = Math.PI / 180;
@@ -695,6 +669,13 @@
         return { distM, bearingDeg: brng };
       }
 
+      // Format Northings (N/S) and Eastings (E/W) cleanly so both fit without truncation
+      function formatNorthingsEastings(lat, lon) {
+        const ns = lat >= 0 ? 'N' : 'S';
+        const ew = lon >= 0 ? 'E' : 'W';
+        return `${Math.abs(lat).toFixed(4)}°${ns}  ${Math.abs(lon).toFixed(4)}°${ew}`;
+      }
+
       // --- THEME ACCENT ---
       function applyAccentColor(hex) {
         state.accentColor = hex;
@@ -713,7 +694,6 @@
 
       // --- RENDER TELEMETRY ---
       function renderUI() {
-        // 1. Speed
         const meta = SPEED_META[state.speedUnit] || SPEED_META.mph;
         let effectiveSpeedMs = state.speedMs;
         if (state.driftFilter && effectiveSpeedMs < 0.45) {
@@ -733,22 +713,14 @@
         maxSpeedValue.textContent = convertedMax.toFixed(1);
         maxSpeedUnit.textContent = meta.label;
         rawSpeedMs.textContent = effectiveSpeedMs.toFixed(1) + ' m/s';
-        speedSourceBadge.textContent = state.speedSource;
 
         const pct = Math.min(100, Math.max(0, (convertedSpeed / meta.maxScale) * 100));
         speedGaugeBar.style.width = pct.toFixed(1) + '%';
 
         btnDecimalToggle.textContent = state.showDecimals ? '.0 ON' : '.0 OFF';
         btnDecimalToggle.classList.toggle('active-pill', state.showDecimals);
-
-        speedUnitBtns.forEach(btn => {
-          const active = btn.getAttribute('data-speed-unit') === state.speedUnit;
-          btn.classList.toggle('active-pill', active);
-          btn.classList.toggle('text-neutral-400', !active);
-        });
         selectSpeedUnit.value = state.speedUnit;
 
-        // 2. Heading
         const activeHeading = state.headingDeg !== null ? state.headingDeg : state.lastValidHeadingDeg;
         const cardinal = degToCardinal(activeHeading);
 
@@ -773,15 +745,14 @@
           compassArrow.style.transform = `rotate(${Math.round(activeHeading)}deg)`;
           headingCardinalFull.textContent = cardinal.full;
           headingSubtext.textContent = effectiveSpeedMs >= 0.6
-            ? 'Live GNSS Course Over Ground'
-            : 'Last locked heading (stationary)';
+            ? 'Live GNSS Course'
+            : 'Last locked heading';
         } else {
           headingCardinalFull.textContent = 'True North Ref';
-          headingSubtext.textContent = 'Move > 1.5 mph for GNSS course';
+          headingSubtext.textContent = 'Move > 1.5 mph for course';
         }
         selectHeadingFormat.value = state.headingFormat;
 
-        // 3. Altitude
         const isFeet = state.altUnit === 'ft';
         const altFactor = isFeet ? 3.2808399 : 1.0;
         const altLabel = isFeet ? 'FT' : 'M';
@@ -800,9 +771,9 @@
         }
 
         if (state.vertAccM !== null && !isNaN(state.vertAccM)) {
-          altitudeAccText.textContent = `Vert Acc: ±${Math.round(state.vertAccM * altFactor)} ${altLabel.toLowerCase()}`;
+          altitudeAccText.textContent = `V-Acc: ±${Math.round(state.vertAccM * altFactor)} ${altLabel.toLowerCase()}`;
         } else {
-          altitudeAccText.textContent = 'Vert Acc: ± ---';
+          altitudeAccText.textContent = 'V-Acc: ± ---';
         }
 
         if (state.horizAccM !== null && !isNaN(state.horizAccM)) {
@@ -814,25 +785,19 @@
         }
 
         if (state.lat !== null && state.lon !== null) {
-          coordsFooter.textContent = `${state.lat.toFixed(4)}°, ${state.lon.toFixed(4)}°`;
+          coordsFooter.textContent = formatNorthingsEastings(state.lat, state.lon);
         } else {
           coordsFooter.textContent = 'LAT/LON: ---';
         }
 
-        altUnitBtns.forEach(btn => {
-          const active = btn.getAttribute('data-alt-unit') === state.altUnit;
-          btn.classList.toggle('active-pill', active);
-          btn.classList.toggle('text-neutral-400', !active);
-        });
         selectAltUnit.value = state.altUnit;
 
-        // Drift filter button
         btnDriftFilter.textContent = state.driftFilter ? 'ON' : 'OFF';
         btnDriftFilter.classList.toggle('active-pill', state.driftFilter);
       }
 
       // --- GNSS POSITION HANDLER ---
-      function handlePositionUpdate(pos, isSimulated) {
+      function handlePositionUpdate(pos) {
         const now = Date.now();
         const coords = pos.coords;
 
@@ -841,22 +806,18 @@
         state.horizAccM = coords.accuracy;
         state.vertAccM = coords.altitudeAccuracy;
 
-        // Speed determination: Prefer hardware GNSS Doppler speed (coords.speed)
         let currentSpeedMs = coords.speed;
         let currentHeading = coords.heading;
-        let source = isSimulated ? 'SIM' : 'DOPPLER';
 
         if ((currentSpeedMs === null || currentSpeedMs === undefined || isNaN(currentSpeedMs)) && state.prevFix) {
           const dtSec = (now - state.prevFix.time) / 1000;
           if (dtSec > 0.2 && dtSec < 30) {
             const geo = computeGeodesic(state.prevFix.lat, state.prevFix.lon, coords.latitude, coords.longitude);
-            // Only trust calculated speed if movement exceeds horizontal accuracy jitter
             if (geo.distM > Math.max(1.5, (coords.accuracy || 5) * 0.35)) {
               currentSpeedMs = geo.distM / dtSec;
               if (currentHeading === null || isNaN(currentHeading)) {
                 currentHeading = geo.bearingDeg;
               }
-              source = 'CALC';
             } else {
               currentSpeedMs = 0;
             }
@@ -868,14 +829,12 @@
         }
 
         state.speedMs = currentSpeedMs;
-        state.speedSource = source;
 
         const filteredSpeed = (state.driftFilter && currentSpeedMs < 0.45) ? 0 : currentSpeedMs;
         if (filteredSpeed > state.maxSpeedMs) {
           state.maxSpeedMs = filteredSpeed;
         }
 
-        // Heading update
         if (currentHeading !== null && currentHeading !== undefined && !isNaN(currentHeading) && filteredSpeed >= 0.5) {
           state.headingDeg = ((currentHeading % 360) + 360) % 360;
           state.lastValidHeadingDeg = state.headingDeg;
@@ -883,7 +842,6 @@
           state.headingDeg = null;
         }
 
-        // Altitude update
         if (coords.altitude !== null && coords.altitude !== undefined && !isNaN(coords.altitude)) {
           state.altitudeM = coords.altitude;
           if (state.minAltitudeM === null || coords.altitude < state.minAltitudeM) {
@@ -894,7 +852,7 @@
           }
         }
 
-        // Fix rate calculation
+        const has3D = coords.altitude !== null && coords.altitude !== undefined && !isNaN(coords.altitude);
         if (state.prevFix) {
           const dt = now - state.prevFix.time;
           if (dt > 50 && dt < 15000) {
@@ -902,8 +860,11 @@
             if (state.fixIntervalsMs.length > 5) state.fixIntervalsMs.shift();
             const avgMs = state.fixIntervalsMs.reduce((a, b) => a + b, 0) / state.fixIntervalsMs.length;
             const hz = 1000 / avgMs;
-            fixRateText.textContent = `FIX: ${hz.toFixed(1)} Hz`;
+            state.fixHz = hz;
+            fixRateText.textContent = `${has3D ? '3D' : '2D'} • ${hz.toFixed(1)} Hz`;
           }
+        } else {
+          fixRateText.textContent = `${has3D ? '3D FIX' : '2D FIX'} • 1.0 Hz`;
         }
 
         state.prevFix = {
@@ -913,25 +874,21 @@
         };
 
         const d = new Date(now);
-        lastUpdateTime.textContent = 'LAST: ' + d.toLocaleTimeString([], { hour12: false });
+        lastUpdateTime.textContent = d.toLocaleTimeString([], { hour12: false });
 
-        // Update status indicator
-        if (isSimulated) {
-          gnssDot.className = 'w-2.5 h-2.5 rounded-full bg-cyan-400 pulse-live';
-          gnssStatusText.textContent = 'DEMO GNSS LOCK';
-        } else {
-          gnssDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 pulse-live';
-          gnssStatusText.textContent = 'GNSS 3D LOCK';
-        }
+        gnssDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 pulse-live';
+        gnssStatusText.textContent = has3D ? 'GNSS 3D LOCK' : 'GNSS 2D LOCK';
 
         renderUI();
       }
 
       function handlePositionError(err) {
-        if (state.demoActive) return;
         gnssDot.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
-        if (err && err.code === 1) {
-          gnssStatusText.textContent = 'LOCATION DENIED (TAP DEMO OR PERMIT)';
+        if (isLocalFileProtocol()) {
+          gnssStatusText.textContent = 'BLOCKED ON LOCAL FILE (NEEDS HTTPS)';
+          insecureOriginBanner.classList.remove('hidden');
+        } else if (err && err.code === 1) {
+          gnssStatusText.textContent = 'LOCATION DENIED (TAP TO RETRY)';
         } else if (err && err.code === 2) {
           gnssStatusText.textContent = 'GNSS UNAVAILABLE';
         } else if (err && err.code === 3) {
@@ -942,7 +899,6 @@
       }
 
       function startGnssWatch() {
-        if (state.demoActive) return;
         if (!('geolocation' in navigator)) {
           gnssDot.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
           gnssStatusText.textContent = 'NO GEOLOCATION API';
@@ -958,8 +914,14 @@
         gnssStatusText.textContent = 'GNSS ACQUIRING...';
 
         try {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => handlePositionUpdate(pos),
+            (err) => handlePositionError(err),
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+          );
+
           state.watchId = navigator.geolocation.watchPosition(
-            (pos) => handlePositionUpdate(pos, false),
+            (pos) => handlePositionUpdate(pos),
             (err) => handlePositionError(err),
             {
               enableHighAccuracy: true,
@@ -972,61 +934,6 @@
         }
       }
 
-      // --- DEMO / SIMULATOR MODE ---
-      function toggleDemoMode(forceState) {
-        state.demoActive = typeof forceState === 'boolean' ? forceState : !state.demoActive;
-
-        if (state.demoActive) {
-          if (state.watchId !== null && 'geolocation' in navigator) {
-            navigator.geolocation.clearWatch(state.watchId);
-            state.watchId = null;
-          }
-          btnDemoMode.textContent = 'DEMO: ON';
-          btnDemoMode.classList.add('active-pill');
-          demoControlBar.classList.remove('hidden');
-
-          if (state.demoTimer) clearInterval(state.demoTimer);
-          state.demoTimer = setInterval(() => {
-            state.demoPhase += 0.08;
-            let simSpeedMs = parseFloat(demoSpeedSlider.value) || 28;
-            if (state.demoAutoCruise) {
-              // Smoothly cruise between ~22 m/s (49 mph) and ~34 m/s (76 mph)
-              simSpeedMs = 28.5 + Math.sin(state.demoPhase * 0.7) * 5.8 + Math.cos(state.demoPhase * 1.9) * 1.4;
-              demoSpeedSlider.value = simSpeedMs.toFixed(1);
-            }
-            const simHeading = (285 + Math.sin(state.demoPhase * 0.35) * 28 + 360) % 360;
-            const simAltM = 224 + Math.sin(state.demoPhase * 0.2) * 14;
-
-            handlePositionUpdate({
-              coords: {
-                latitude: 41.4169 + Math.sin(state.demoPhase * 0.05) * 0.01,
-                longitude: -87.3653 + Math.cos(state.demoPhase * 0.05) * 0.01,
-                speed: Math.max(0, simSpeedMs),
-                heading: simHeading,
-                altitude: simAltM,
-                accuracy: 3.2,
-                altitudeAccuracy: 4.5
-              }
-            }, true);
-          }, 250);
-
-          showToast('Demo GNSS Simulator Active');
-        } else {
-          if (state.demoTimer) {
-            clearInterval(state.demoTimer);
-            state.demoTimer = null;
-          }
-          btnDemoMode.textContent = 'DEMO: OFF';
-          btnDemoMode.classList.remove('active-pill');
-          demoControlBar.classList.add('hidden');
-          state.speedMs = 0;
-          state.prevFix = null;
-          renderUI();
-          startGnssWatch();
-          showToast('Live GNSS Receiver Active');
-        }
-      }
-
       // --- SCREEN WAKE LOCK (ALWAYS-ON DISPLAY) ---
       async function requestWakeLock() {
         if (!state.wakeLockWanted) return;
@@ -1036,9 +943,7 @@
             state.wakeLockSentinel.addEventListener('release', () => {
               updateWakeLockBadge();
             });
-          } catch (e) {
-            // Wake lock might be disallowed in iframe until user gesture or fallback
-          }
+          } catch (e) {}
         }
         updateWakeLockBadge();
       }
@@ -1153,24 +1058,6 @@
         }
       });
 
-      speedUnitBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          state.speedUnit = btn.getAttribute('data-speed-unit');
-          savePrefs();
-          renderUI();
-          showToast(`Speed Unit: ${SPEED_META[state.speedUnit].label}`);
-        });
-      });
-
-      altUnitBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          state.altUnit = btn.getAttribute('data-alt-unit');
-          savePrefs();
-          renderUI();
-          showToast(`Altitude Unit: ${state.altUnit.toUpperCase()}`);
-        });
-      });
-
       themeColorBtns.forEach(btn => {
         btn.addEventListener('click', () => {
           const color = btn.getAttribute('data-theme-color');
@@ -1180,32 +1067,16 @@
       });
 
       btnGnssToggle.addEventListener('click', () => {
-        if (state.demoActive) {
-          toggleDemoMode(false);
-        } else {
-          startGnssWatch();
-          showToast('Refreshing GNSS fix...');
-        }
+        startGnssWatch();
+        showToast('Requesting GNSS location fix...');
+      });
+
+      btnFixInfo.addEventListener('click', () => {
+        showToast('Web browsers hide raw satellite count; showing live GNSS fix rate');
       });
 
       btnWakeLock.addEventListener('click', () => {
         toggleWakeLock();
-      });
-
-      btnDemoMode.addEventListener('click', () => {
-        toggleDemoMode();
-      });
-
-      btnDemoAuto.addEventListener('click', () => {
-        state.demoAutoCruise = !state.demoAutoCruise;
-        btnDemoAuto.classList.toggle('active-pill', state.demoAutoCruise);
-        btnDemoAuto.textContent = state.demoAutoCruise ? 'AUTO CRUISE' : 'MANUAL SLIDER';
-      });
-
-      demoSpeedSlider.addEventListener('input', () => {
-        state.demoAutoCruise = false;
-        btnDemoAuto.classList.remove('active-pill');
-        btnDemoAuto.textContent = 'MANUAL SLIDER';
       });
 
       btnMirrorHud.addEventListener('click', () => {
@@ -1263,19 +1134,23 @@
         renderUI();
       });
 
-      // Download Standalone HTML for Pixel 9 Pro XL
+      // Copy Clean HTML Source
       btnDownloadHtml.addEventListener('click', () => {
+        settingsModal.classList.add('hidden');
         const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'pixel9_gnss_speedometer.html';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
-        showToast('Downloaded pixel9_gnss_speedometer.html');
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = htmlContent;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          showToast('Clean HTML copied to clipboard!');
+        } catch (err) {
+          showToast('Use Canvas Export button to save HTML');
+        }
       });
 
       // --- DYNAMIC PWA MANIFEST & INSTALL PROMPT ---
@@ -1320,7 +1195,6 @@
         btnInstallPwaPrompt.classList.add('hidden');
       });
 
-      // Re-acquire wake lock on any first tap
       document.addEventListener('click', () => {
         if (state.wakeLockWanted && !state.wakeLockSentinel) {
           requestWakeLock();
