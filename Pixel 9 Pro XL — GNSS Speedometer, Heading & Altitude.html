@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="GNSS HUD" />
+  <title>Pixel 9 Pro XL — GNSS Speedometer, Heading & Altitude</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --accent: #00ff66;
+      --accent-dim: rgba(0, 255, 102, 0.16);
+      --accent-border: rgba(0, 255, 102, 0.35);
+      --accent-glow: rgba(0, 255, 102, 0.22);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #000000;
+      color: #ffffff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow-x: hidden;
+    }
+
+    .font-mono-tabular {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1, "zero" 1;
+    }
+
+    .accent-text {
+      color: var(--accent);
+    }
+
+    .accent-glow {
+      text-shadow: 0 0 28px var(--accent-glow);
+    }
+
+    .oled-card {
+      background-color: #050505;
+      border: 1px solid #1a1a1a;
+      transition: border-color 0.18s ease, transform 0.12s ease, background-color 0.18s ease;
+    }
+
+    .oled-card:active {
+      transform: scale(0.985);
+      border-color: var(--accent-border);
+      background-color: #0a0a0a;
+    }
+
+    .oled-pill {
+      background-color: #080808;
+      border: 1px solid #222222;
+      transition: all 0.15s ease;
+    }
+
+    .oled-pill:hover {
+      border-color: #3a3a3a;
+    }
+
+    .oled-pill.active-pill {
+      background-color: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .hud-mirrored {
+      transform: scaleX(-1);
+    }
+
+    /* Responsive auto-rotate layout */
+    .app-shell {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: env(safe-area-inset-top, 12px) env(safe-area-inset-right, 16px) env(safe-area-inset-bottom, 12px) env(safe-area-inset-left, 16px);
+    }
+
+    .speed-digits {
+      font-size: clamp(5.25rem, 23vmin, 13.5rem);
+      line-height: 0.92;
+      letter-spacing: -0.04em;
+    }
+
+    .secondary-digits {
+      font-size: clamp(2rem, 7.2vmin, 4.25rem);
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+    }
+
+    /* Landscape layout adaptation */
+    @media (orientation: landscape) and (max-height: 640px) {
+      .main-telemetry-grid {
+        display: grid;
+        grid-template-columns: 1.35fr 1fr;
+        gap: 0.85rem;
+        align-items: stretch;
+      }
+      .secondary-telemetry-grid {
+        display: flex;
+        flex-direction: column;
+        justify-content: stretch;
+        gap: 0.85rem;
+      }
+      .speed-digits {
+        font-size: clamp(4.5rem, 28vh, 10rem);
+      }
+      .secondary-digits {
+        font-size: clamp(1.65rem, 9.5vh, 3rem);
+      }
+    }
+
+    @media (orientation: portrait), (min-height: 641px) {
+      .main-telemetry-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        flex: 1;
+        justify-content: center;
+      }
+      .secondary-telemetry-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.85rem;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .secondary-telemetry-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.88); }
+    }
+
+    .pulse-live {
+      animation: pulse-dot 1.8s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-black text-white selection:bg-emerald-500 selection:text-black">
+
+  <div id="hudContainer" class="app-shell max-w-6xl mx-auto w-full gap-3 py-3 px-3 sm:px-5">
+    
+    <!-- TOP STATUS & QUICK CONTROLS BAR -->
+    <header class="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-900 pb-2.5">
+      <!-- Left: GNSS Signal Status -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <button id="btnGnssToggle" type="button" class="oled-pill px-3 py-1.5 rounded-full flex items-center gap-2 text-xs font-semibold tracking-wider uppercase" title="Tap to reconnect or refresh GNSS receiver">
+          <span id="gnssDot" class="w-2.5 h-2.5 rounded-full bg-amber-400 pulse-live"></span>
+          <span id="gnssStatusText">GNSS ACQUIRING</span>
+        </button>
+
+        <div class="oled-pill px-2.5 py-1.5 rounded-full text-xs font-mono-tabular text-neutral-400 flex items-center gap-1.5" title="Horizontal GPS Accuracy">
+          <span class="text-neutral-500">ACC</span>
+          <span id="accReadout" class="text-neutral-200 font-semibold">---</span>
+        </div>
+
+        <button id="btnWakeLock" type="button" class="oled-pill active-pill px-2.5 py-1.5 rounded-full text-xs font-semibold tracking-wide flex items-center gap-1.5" title="Toggle Always-On Screen Wake Lock">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+          </svg>
+          <span id="wakeLockText">ALWAYS ON</span>
+        </button>
+      </div>
+
+      <!-- Right: Utility Controls -->
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <button id="btnDemoMode" type="button" class="oled-pill px-3 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase text-neutral-300" title="Simulate realistic GNSS movement indoors">
+          DEMO: OFF
+        </button>
+
+        <button id="btnMirrorHud" type="button" class="oled-pill px-2.5 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase text-neutral-300" title="Flip screen horizontally for windshield HUD reflection">
+          HUD
+        </button>
+
+        <button id="btnFullscreen" type="button" class="oled-pill p-1.5 rounded-full text-neutral-300" aria-label="Toggle Fullscreen" title="Toggle Fullscreen">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+          </svg>
+        </button>
+
+        <button id="btnOpenSettings" type="button" class="oled-pill px-2.5 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase text-neutral-300 flex items-center gap-1" title="Units, OLED Color Theme & PWA Install Guide">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+          </svg>
+          <span>MENU</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- DEMO SIMULATOR SLIDER BAR (Visible only when Demo Mode is active) -->
+    <div id="demoControlBar" class="hidden bg-neutral-950 border border-neutral-800 rounded-xl px-3.5 py-2 flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div class="flex items-center gap-2">
+        <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold uppercase tracking-wider">GNSS Simulator</span>
+        <span class="text-neutral-400 hidden sm:inline">Adjust simulated speed or let autopilot cruise:</span>
+      </div>
+      <div class="flex items-center gap-3 flex-1 max-w-md">
+        <button id="btnDemoAuto" type="button" class="oled-pill active-pill px-2.5 py-1 rounded text-xs font-semibold">AUTO CRUISE</button>
+        <input id="demoSpeedSlider" type="range" min="0" max="65" step="0.5" value="29" class="w-full accent-emerald-400 cursor-pointer" aria-label="Simulated speed meters per second" />
+      </div>
+    </div>
+
+    <!-- MAIN TELEMETRY AREA: AUTO-ROTATE GRID -->
+    <main class="main-telemetry-grid my-auto">
+      
+      <!-- PRIMARY CENTER DISPLAY: LARGE GNSS SPEED -->
+      <section id="cardSpeed" role="button" tabindex="0" aria-label="Speed Display. Tap to cycle speed units." class="oled-card rounded-3xl p-4 sm:p-6 flex flex-col justify-between items-center relative overflow-hidden cursor-pointer flex-1 min-h-[240px]">
+        
+        <!-- Top Row inside Speed Card -->
+        <div class="w-full flex items-center justify-between text-xs uppercase tracking-widest text-neutral-400 font-semibold">
+          <div class="flex items-center gap-2">
+            <span>GNSS GROUND SPEED</span>
+            <span id="speedSourceBadge" class="text-[10px] px-2 py-0.5 rounded bg-neutral-900 text-neutral-400 border border-neutral-800">DOPPLER</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-neutral-400">
+            <span class="text-[11px] text-neutral-500">TAP TO CYCLE UNIT</span>
+            <span id="speedUnitPill" class="px-2.5 py-0.5 rounded-full bg-neutral-900 border border-neutral-700 text-white font-mono-tabular font-bold">MPH</span>
+          </div>
+        </div>
+
+        <!-- Huge Center Digits -->
+        <div class="my-auto py-2 sm:py-4 flex flex-col items-center justify-center text-center">
+          <div id="speedValue" class="speed-digits font-mono-tabular font-extrabold accent-text accent-glow select-none">
+            0
+          </div>
+          <div class="mt-1 flex items-center gap-3">
+            <span id="speedUnitLabel" class="text-lg sm:text-2xl font-extrabold tracking-widest uppercase text-neutral-200">MPH</span>
+            <button id="btnDecimalToggle" type="button" class="oled-pill px-2.5 py-0.5 rounded text-[11px] font-mono-tabular text-neutral-400 hover:text-white" title="Toggle whole number or 0.1 decimal precision">
+              .0 OFF
+            </button>
+          </div>
+        </div>
+
+        <!-- Bottom Row inside Speed Card: Max Speed & Speed Bar -->
+        <div class="w-full space-y-2">
+          <div class="w-full h-1.5 bg-neutral-900 rounded-full overflow-hidden">
+            <div id="speedGaugeBar" class="h-full transition-all duration-200 rounded-full" style="width: 0%; background-color: var(--accent);"></div>
+          </div>
+          <div class="w-full flex items-center justify-between text-xs font-mono-tabular text-neutral-400 pt-0.5">
+            <div class="flex items-center gap-2">
+              <span class="text-neutral-500 uppercase">MAX</span>
+              <span id="maxSpeedValue" class="text-neutral-200 font-bold">0.0</span>
+              <span id="maxSpeedUnit" class="text-neutral-500">MPH</span>
+              <button id="btnResetMax" type="button" class="oled-pill px-2 py-0.5 rounded text-[10px] uppercase tracking-wider text-neutral-300 hover:text-white">
+                RESET
+              </button>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-neutral-500 uppercase">RAW</span>
+              <span id="rawSpeedMs" class="text-neutral-300">0.0 m/s</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECONDARY READOUTS: HEADING & ALTITUDE (Smaller Digits) -->
+      <div class="secondary-telemetry-grid">
+        
+        <!-- HEADING CARD -->
+        <section id="cardHeading" role="button" tabindex="0" aria-label="Heading Display. Tap to toggle degrees or cardinal direction." class="oled-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between cursor-pointer">
+          <div class="flex items-center justify-between text-xs uppercase tracking-widest text-neutral-400 font-semibold">
+            <span>HEADING (COG)</span>
+            <span id="headingFormatBadge" class="px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-[11px] font-mono-tabular text-neutral-300">DEG + CARD</span>
+          </div>
+
+          <div class="my-auto py-3 flex items-center justify-between gap-3">
+            <div class="flex flex-col">
+              <div class="flex items-baseline gap-2.5 flex-wrap">
+                <span id="headingPrimary" class="secondary-digits font-mono-tabular font-bold text-white">---°</span>
+                <span id="headingSecondary" class="text-xl sm:text-2xl font-extrabold tracking-wider accent-text">--</span>
+              </div>
+              <span id="headingSubtext" class="text-xs text-neutral-400 mt-1 font-mono-tabular">Awaiting motion (&gt;1.5 mph)</span>
+            </div>
+
+            <!-- Crisp SVG Compass Rose -->
+            <div class="relative w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0 flex items-center justify-center rounded-full border border-neutral-800 bg-black">
+              <span class="absolute top-0.5 text-[9px] font-bold text-neutral-400">N</span>
+              <span class="absolute bottom-0.5 text-[9px] font-bold text-neutral-600">S</span>
+              <span class="absolute right-1 text-[9px] font-bold text-neutral-600">E</span>
+              <span class="absolute left-1 text-[9px] font-bold text-neutral-600">W</span>
+              <svg id="compassArrow" class="w-9 h-9 transition-transform duration-300 ease-out" style="transform: rotate(0deg);" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L16 14H8L12 2Z" fill="var(--accent)" />
+                <path d="M12 22L8 14H16L12 22Z" fill="#333333" />
+                <circle cx="12" cy="14" r="2" fill="#000000" />
+              </svg>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] text-neutral-400 font-mono-tabular border-t border-neutral-900 pt-2">
+            <span>TAP TO SWITCH FORMAT</span>
+            <span id="headingCardinalFull" class="text-neutral-300">True North Ref</span>
+          </div>
+        </section>
+
+        <!-- ALTITUDE CARD -->
+        <section id="cardAltitude" role="button" tabindex="0" aria-label="Altitude Display. Tap to toggle feet or meters." class="oled-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between cursor-pointer">
+          <div class="flex items-center justify-between text-xs uppercase tracking-widest text-neutral-400 font-semibold">
+            <span>GNSS ALTITUDE</span>
+            <span id="altUnitBadge" class="px-2.5 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-[11px] font-mono-tabular text-white font-bold">FEET (FT)</span>
+          </div>
+
+          <div class="my-auto py-3 flex items-center justify-between gap-3">
+            <div class="flex flex-col">
+              <div class="flex items-baseline gap-2">
+                <span id="altitudeValue" class="secondary-digits font-mono-tabular font-bold text-white">---</span>
+                <span id="altitudeUnitLabel" class="text-lg sm:text-xl font-bold uppercase accent-text">FT</span>
+              </div>
+              <span id="altitudeAccText" class="text-xs text-neutral-400 mt-1 font-mono-tabular">Vert Acc: ± ---</span>
+            </div>
+
+            <!-- Elevation Icon & Min/Max Pill -->
+            <div class="flex flex-col items-end text-right font-mono-tabular text-xs text-neutral-400 space-y-1">
+              <div class="px-2 py-0.5 rounded bg-neutral-950 border border-neutral-800">
+                <span class="text-neutral-500">MAX </span>
+                <span id="altMaxVal" class="text-neutral-200 font-semibold">---</span>
+              </div>
+              <div class="px-2 py-0.5 rounded bg-neutral-950 border border-neutral-800">
+                <span class="text-neutral-500">MIN </span>
+                <span id="altMinVal" class="text-neutral-200 font-semibold">---</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] text-neutral-400 font-mono-tabular border-t border-neutral-900 pt-2">
+            <span>TAP TO TOGGLE FT / M</span>
+            <span id="coordsFooter" class="text-neutral-300 truncate max-w-[175px]">LAT/LON: ---</span>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+    <!-- BOTTOM QUICK UNIT & THEME BAR -->
+    <footer class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-neutral-900 text-xs">
+      <!-- Direct Speed Unit Switcher -->
+      <div class="flex items-center gap-1 flex-wrap">
+        <span class="text-[11px] text-neutral-400 uppercase tracking-wider mr-1 font-semibold">SPEED:</span>
+        <button type="button" data-speed-unit="mph" class="speed-unit-btn oled-pill active-pill px-2.5 py-1 rounded-lg font-mono-tabular font-semibold">MPH</button>
+        <button type="button" data-speed-unit="kmh" class="speed-unit-btn oled-pill px-2.5 py-1 rounded-lg font-mono-tabular font-semibold text-neutral-400">KM/H</button>
+        <button type="button" data-speed-unit="knots" class="speed-unit-btn oled-pill px-2.5 py-1 rounded-lg font-mono-tabular font-semibold text-neutral-400">KTS</button>
+        <button type="button" data-speed-unit="ms" class="speed-unit-btn oled-pill px-2.5 py-1 rounded-lg font-mono-tabular font-semibold text-neutral-400">M/S</button>
+      </div>
+
+      <!-- Direct Altitude Unit Switcher -->
+      <div class="flex items-center gap-1">
+        <span class="text-[11px] text-neutral-400 uppercase tracking-wider mr-1 font-semibold">ALT:</span>
+        <button type="button" data-alt-unit="ft" class="alt-unit-btn oled-pill active-pill px-2.5 py-1 rounded-lg font-mono-tabular font-semibold">FT</button>
+        <button type="button" data-alt-unit="m" class="alt-unit-btn oled-pill px-2.5 py-1 rounded-lg font-mono-tabular font-semibold text-neutral-400">M</button>
+      </div>
+
+      <!-- Timestamp / Fix Rate -->
+      <div class="text-[11px] font-mono-tabular text-neutral-400 hidden sm:flex items-center gap-2">
+        <span id="fixRateText">FIX: -- Hz</span>
+        <span>•</span>
+        <span id="lastUpdateTime">LAST: --:--:--</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- SETTINGS & PWA INSTALL MODAL -->
+  <div id="settingsModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-neutral-950 border border-neutral-800 rounded-3xl max-w-lg w-full p-5 sm:p-6 space-y-5 max-h-[90dvh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-neutral-800 pb-3">
+        <div>
+          <h2 class="text-lg font-bold text-white">GNSS HUD Configuration</h2>
+          <p class="text-xs text-neutral-400">Optimized for Pixel 9 Pro XL Super Actua OLED</p>
+        </div>
+        <button id="btnCloseSettings" type="button" class="oled-pill px-3 py-1.5 rounded-full text-xs font-semibold text-neutral-300 hover:text-white">
+          CLOSE
+        </button>
+      </div>
+
+      <!-- OLED Theme Color Picker -->
+      <div class="space-y-2">
+        <label class="text-xs font-semibold uppercase tracking-wider text-neutral-400">OLED High-Contrast Accent Color</label>
+        <div class="grid grid-cols-5 gap-2">
+          <button type="button" data-theme-color="#00ff66" class="theme-color-btn oled-pill active-pill py-2 rounded-xl flex flex-col items-center gap-1 text-[11px] font-semibold">
+            <span class="w-4 h-4 rounded-full bg-[#00ff66]"></span>
+            <span>Green</span>
+          </button>
+          <button type="button" data-theme-color="#00e5ff" class="theme-color-btn oled-pill py-2 rounded-xl flex flex-col items-center gap-1 text-[11px] font-semibold">
+            <span class="w-4 h-4 rounded-full bg-[#00e5ff]"></span>
+            <span>Cyan</span>
+          </button>
+          <button type="button" data-theme-color="#ffb300" class="theme-color-btn oled-pill py-2 rounded-xl flex flex-col items-center gap-1 text-[11px] font-semibold">
+            <span class="w-4 h-4 rounded-full bg-[#ffb300]"></span>
+            <span>Amber</span>
+          </button>
+          <button type="button" data-theme-color="#ff3333" class="theme-color-btn oled-pill py-2 rounded-xl flex flex-col items-center gap-1 text-[11px] font-semibold">
+            <span class="w-4 h-4 rounded-full bg-[#ff3333]"></span>
+            <span>Night Red</span>
+          </button>
+          <button type="button" data-theme-color="#ffffff" class="theme-color-btn oled-pill py-2 rounded-xl flex flex-col items-center gap-1 text-[11px] font-semibold">
+            <span class="w-4 h-4 rounded-full bg-white"></span>
+            <span>White</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Unit Selection Summary -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+        <div class="p-3 rounded-2xl bg-black border border-neutral-800 space-y-1.5">
+          <div class="text-neutral-400 font-semibold uppercase">Speed Unit</div>
+          <select id="selectSpeedUnit" aria-label="Select Speed Unit" class="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-2.5 py-1.5 text-white font-mono-tabular">
+            <option value="mph">MPH (mi/h)</option>
+            <option value="kmh">KM/H (km/h)</option>
+            <option value="knots">KNOTS (kts)</option>
+            <option value="ms">M/S (m/s)</option>
+          </select>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-black border border-neutral-800 space-y-1.5">
+          <div class="text-neutral-400 font-semibold uppercase">Altitude Unit</div>
+          <select id="selectAltUnit" aria-label="Select Altitude Unit" class="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-2.5 py-1.5 text-white font-mono-tabular">
+            <option value="ft">Feet (FT)</option>
+            <option value="m">Meters (M)</option>
+          </select>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-black border border-neutral-800 space-y-1.5">
+          <div class="text-neutral-400 font-semibold uppercase">Heading Display</div>
+          <select id="selectHeadingFormat" aria-label="Select Heading Format" class="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-2.5 py-1.5 text-white font-mono-tabular">
+            <option value="both">Degrees + Cardinal</option>
+            <option value="deg">Degrees Only (0-360°)</option>
+            <option value="card">Cardinal Only (N/NE)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Low-Speed Noise Filter -->
+      <div class="p-3.5 rounded-2xl bg-black border border-neutral-800 flex items-center justify-between gap-3">
+        <div>
+          <div class="text-xs font-semibold text-white">Stationary Drift Filter (&lt; 0.5 m/s)</div>
+          <div class="text-[11px] text-neutral-400">Zeroes out minor GPS jitter when parked or standing still</div>
+        </div>
+        <button id="btnDriftFilter" type="button" class="oled-pill active-pill px-3 py-1.5 rounded-full text-xs font-semibold">
+          ON
+        </button>
+      </div>
+
+      <!-- Install on Pixel 9 Pro XL Instructions -->
+      <div class="p-4 rounded-2xl bg-neutral-900/60 border border-neutral-800 space-y-2.5 text-xs">
+        <div class="font-bold text-white flex items-center gap-2">
+          <svg class="w-4 h-4 accent-text" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+          </svg>
+          <span>Install as Standalone App on Pixel 9 Pro XL</span>
+        </div>
+        <ol class="list-decimal list-inside text-neutral-300 space-y-1 leading-relaxed">
+          <li>Tap <strong>Download Standalone PWA (.html)</strong> below or host this single file via GitHub Pages / local server.</li>
+          <li>Open in <strong>Chrome on your Pixel 9 Pro XL</strong> and allow <strong>Precise Location</strong>.</li>
+          <li>Tap the Chrome menu (<strong>⋮</strong>) → <strong>Add to Home screen</strong> (or <strong>Install app</strong>) for fullscreen OLED launch with automatic screen Wake Lock.</li>
+        </ol>
+        <div class="pt-1 flex flex-wrap gap-2">
+          <button id="btnDownloadHtml" type="button" class="oled-pill active-pill px-3.5 py-2 rounded-xl font-semibold text-xs flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            <span>Download Standalone PWA (.html)</span>
+          </button>
+          <button id="btnInstallPwaPrompt" type="button" class="hidden oled-pill px-3.5 py-2 rounded-xl font-semibold text-xs text-white">
+            Install PWA Now
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toastBanner" class="fixed bottom-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-opacity duration-200 bg-neutral-900 border border-neutral-700 text-white px-4 py-2 rounded-full text-xs font-semibold shadow-2xl">
+    Unit updated
+  </div>
+
+  <script>
+    (function () {
+      // --- STATE ---
+      const state = {
+        speedUnit: 'mph',       // 'mph' | 'kmh' | 'knots' | 'ms'
+        altUnit: 'ft',          // 'ft' | 'm'
+        headingFormat: 'both',  // 'both' | 'deg' | 'card'
+        showDecimals: false,
+        driftFilter: true,
+        mirrored: false,
+        accentColor: '#00ff66',
+
+        // Live / Simulated GNSS Telemetry (SI units internally: m/s, meters, degrees)
+        speedMs: 0,
+        maxSpeedMs: 0,
+        headingDeg: null,
+        lastValidHeadingDeg: null,
+        altitudeM: null,
+        minAltitudeM: null,
+        maxAltitudeM: null,
+        horizAccM: null,
+        vertAccM: null,
+        lat: null,
+        lon: null,
+        speedSource: 'DOPPLER', // 'DOPPLER' | 'CALC' | 'SIM'
+
+        // Previous Fix for Haversine fallback when Doppler speed/heading is null
+        prevFix: null,
+        fixIntervalsMs: [],
+
+        // Watch / Demo handles
+        watchId: null,
+        demoActive: false,
+        demoAutoCruise: true,
+        demoTimer: null,
+        demoPhase: 0,
+
+        // Wake Lock
+        wakeLockWanted: true,
+        wakeLockSentinel: null,
+        keepAwakeTimer: null
+      };
+
+      // Load saved preferences safely
+      try {
+        const saved = JSON.parse(localStorage.getItem('pixel9_gnss_prefs') || '{}');
+        if (saved.speedUnit) state.speedUnit = saved.speedUnit;
+        if (saved.altUnit) state.altUnit = saved.altUnit;
+        if (saved.headingFormat) state.headingFormat = saved.headingFormat;
+        if (typeof saved.showDecimals === 'boolean') state.showDecimals = saved.showDecimals;
+        if (typeof saved.driftFilter === 'boolean') state.driftFilter = saved.driftFilter;
+        if (saved.accentColor) state.accentColor = saved.accentColor;
+      } catch (e) {
+        // Ignore storage restrictions in sandboxed iframes
+      }
+
+      function savePrefs() {
+        try {
+          localStorage.setItem('pixel9_gnss_prefs', JSON.stringify({
+            speedUnit: state.speedUnit,
+            altUnit: state.altUnit,
+            headingFormat: state.headingFormat,
+            showDecimals: state.showDecimals,
+            driftFilter: state.driftFilter,
+            accentColor: state.accentColor
+          }));
+        } catch (e) {}
+      }
+
+      // --- DOM ELEMENTS ---
+      const hudContainer = document.getElementById('hudContainer');
+      const btnGnssToggle = document.getElementById('btnGnssToggle');
+      const gnssDot = document.getElementById('gnssDot');
+      const gnssStatusText = document.getElementById('gnssStatusText');
+      const accReadout = document.getElementById('accReadout');
+      const btnWakeLock = document.getElementById('btnWakeLock');
+      const wakeLockText = document.getElementById('wakeLockText');
+      const btnDemoMode = document.getElementById('btnDemoMode');
+      const btnMirrorHud = document.getElementById('btnMirrorHud');
+      const btnFullscreen = document.getElementById('btnFullscreen');
+      const btnOpenSettings = document.getElementById('btnOpenSettings');
+      const btnCloseSettings = document.getElementById('btnCloseSettings');
+      const settingsModal = document.getElementById('settingsModal');
+
+      const demoControlBar = document.getElementById('demoControlBar');
+      const btnDemoAuto = document.getElementById('btnDemoAuto');
+      const demoSpeedSlider = document.getElementById('demoSpeedSlider');
+
+      const cardSpeed = document.getElementById('cardSpeed');
+      const speedSourceBadge = document.getElementById('speedSourceBadge');
+      const speedUnitPill = document.getElementById('speedUnitPill');
+      const speedValue = document.getElementById('speedValue');
+      const speedUnitLabel = document.getElementById('speedUnitLabel');
+      const btnDecimalToggle = document.getElementById('btnDecimalToggle');
+      const speedGaugeBar = document.getElementById('speedGaugeBar');
+      const maxSpeedValue = document.getElementById('maxSpeedValue');
+      const maxSpeedUnit = document.getElementById('maxSpeedUnit');
+      const btnResetMax = document.getElementById('btnResetMax');
+      const rawSpeedMs = document.getElementById('rawSpeedMs');
+
+      const cardHeading = document.getElementById('cardHeading');
+      const headingFormatBadge = document.getElementById('headingFormatBadge');
+      const headingPrimary = document.getElementById('headingPrimary');
+      const headingSecondary = document.getElementById('headingSecondary');
+      const headingSubtext = document.getElementById('headingSubtext');
+      const compassArrow = document.getElementById('compassArrow');
+      const headingCardinalFull = document.getElementById('headingCardinalFull');
+
+      const cardAltitude = document.getElementById('cardAltitude');
+      const altUnitBadge = document.getElementById('altUnitBadge');
+      const altitudeValue = document.getElementById('altitudeValue');
+      const altitudeUnitLabel = document.getElementById('altitudeUnitLabel');
+      const altitudeAccText = document.getElementById('altitudeAccText');
+      const altMaxVal = document.getElementById('altMaxVal');
+      const altMinVal = document.getElementById('altMinVal');
+      const coordsFooter = document.getElementById('coordsFooter');
+
+      const fixRateText = document.getElementById('fixRateText');
+      const lastUpdateTime = document.getElementById('lastUpdateTime');
+
+      const selectSpeedUnit = document.getElementById('selectSpeedUnit');
+      const selectAltUnit = document.getElementById('selectAltUnit');
+      const selectHeadingFormat = document.getElementById('selectHeadingFormat');
+      const btnDriftFilter = document.getElementById('btnDriftFilter');
+      const btnDownloadHtml = document.getElementById('btnDownloadHtml');
+      const btnInstallPwaPrompt = document.getElementById('btnInstallPwaPrompt');
+      const toastBanner = document.getElementById('toastBanner');
+
+      const speedUnitBtns = document.querySelectorAll('.speed-unit-btn');
+      const altUnitBtns = document.querySelectorAll('.alt-unit-btn');
+      const themeColorBtns = document.querySelectorAll('.theme-color-btn');
+
+      // --- TOAST HELPER ---
+      let toastTimeout = null;
+      function showToast(msg) {
+        toastBanner.textContent = msg;
+        toastBanner.classList.remove('opacity-0');
+        toastBanner.classList.add('opacity-100');
+        if (toastTimeout) clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+          toastBanner.classList.remove('opacity-100');
+          toastBanner.classList.add('opacity-0');
+        }, 1600);
+      }
+
+      // --- UNIT CONVERSIONS ---
+      const SPEED_META = {
+        mph:   { factor: 2.23693629, label: 'MPH',   maxScale: 100 },
+        kmh:   { factor: 3.6,        label: 'KM/H',  maxScale: 160 },
+        knots: { factor: 1.94384449, label: 'KTS',   maxScale: 85  },
+        ms:    { factor: 1.0,        label: 'M/S',   maxScale: 45  }
+      };
+
+      const CARDINALS_16 = [
+        { short: 'N',   full: 'North' },
+        { short: 'NNE', full: 'North-Northeast' },
+        { short: 'NE',  full: 'Northeast' },
+        { short: 'ENE', full: 'East-Northeast' },
+        { short: 'E',   full: 'East' },
+        { short: 'ESE', full: 'East-Southeast' },
+        { short: 'SE',  full: 'Southeast' },
+        { short: 'SSE', full: 'South-Southeast' },
+        { short: 'S',   full: 'South' },
+        { short: 'SSW', full: 'South-Southwest' },
+        { short: 'SW',  full: 'Southwest' },
+        { short: 'WSW', full: 'West-Southwest' },
+        { short: 'W',   full: 'West' },
+        { short: 'WNW', full: 'West-Northwest' },
+        { short: 'NW',  full: 'Northwest' },
+        { short: 'NNW', full: 'North-Northwest' }
+      ];
+
+      function degToCardinal(deg) {
+        if (deg === null || isNaN(deg)) return { short: '--', full: 'True North Ref' };
+        const normalized = ((deg % 360) + 360) % 360;
+        const idx = Math.round(normalized / 22.5) % 16;
+        return CARDINALS_16[idx];
+      }
+
+      // Haversine distance (meters) and initial bearing (degrees) fallback
+      function computeGeodesic(lat1, lon1, lat2, lon2) {
+        const R = 6371000;
+        const toRad = Math.PI / 180;
+        const dLat = (lat2 - lat1) * toRad;
+        const dLon = (lon2 - lon1) * toRad;
+        const rLat1 = lat1 * toRad;
+        const rLat2 = lat2 * toRad;
+
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(rLat1) * Math.cos(rLat2) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distM = R * c;
+
+        const y = Math.sin(dLon) * Math.cos(rLat2);
+        const x = Math.cos(rLat1) * Math.sin(rLat2) -
+                  Math.sin(rLat1) * Math.cos(rLat2) * Math.cos(dLon);
+        const brng = (Math.atan2(y, x) * (180 / Math.PI) + 360) % 360;
+
+        return { distM, bearingDeg: brng };
+      }
+
+      // --- THEME ACCENT ---
+      function applyAccentColor(hex) {
+        state.accentColor = hex;
+        const root = document.documentElement;
+        root.style.setProperty('--accent', hex);
+        root.style.setProperty('--accent-dim', hex + '26');
+        root.style.setProperty('--accent-border', hex + '66');
+        root.style.setProperty('--accent-glow', hex + '38');
+
+        themeColorBtns.forEach(btn => {
+          const isMatch = btn.getAttribute('data-theme-color') === hex;
+          btn.classList.toggle('active-pill', isMatch);
+        });
+        savePrefs();
+      }
+
+      // --- RENDER TELEMETRY ---
+      function renderUI() {
+        // 1. Speed
+        const meta = SPEED_META[state.speedUnit] || SPEED_META.mph;
+        let effectiveSpeedMs = state.speedMs;
+        if (state.driftFilter && effectiveSpeedMs < 0.45) {
+          effectiveSpeedMs = 0;
+        }
+        const convertedSpeed = effectiveSpeedMs * meta.factor;
+        const convertedMax = state.maxSpeedMs * meta.factor;
+
+        if (state.showDecimals) {
+          speedValue.textContent = convertedSpeed.toFixed(1);
+        } else {
+          speedValue.textContent = Math.round(convertedSpeed).toString();
+        }
+
+        speedUnitPill.textContent = meta.label;
+        speedUnitLabel.textContent = meta.label;
+        maxSpeedValue.textContent = convertedMax.toFixed(1);
+        maxSpeedUnit.textContent = meta.label;
+        rawSpeedMs.textContent = effectiveSpeedMs.toFixed(1) + ' m/s';
+        speedSourceBadge.textContent = state.speedSource;
+
+        const pct = Math.min(100, Math.max(0, (convertedSpeed / meta.maxScale) * 100));
+        speedGaugeBar.style.width = pct.toFixed(1) + '%';
+
+        btnDecimalToggle.textContent = state.showDecimals ? '.0 ON' : '.0 OFF';
+        btnDecimalToggle.classList.toggle('active-pill', state.showDecimals);
+
+        speedUnitBtns.forEach(btn => {
+          const active = btn.getAttribute('data-speed-unit') === state.speedUnit;
+          btn.classList.toggle('active-pill', active);
+          btn.classList.toggle('text-neutral-400', !active);
+        });
+        selectSpeedUnit.value = state.speedUnit;
+
+        // 2. Heading
+        const activeHeading = state.headingDeg !== null ? state.headingDeg : state.lastValidHeadingDeg;
+        const cardinal = degToCardinal(activeHeading);
+
+        if (state.headingFormat === 'both') {
+          headingFormatBadge.textContent = 'DEG + CARD';
+          headingPrimary.textContent = activeHeading !== null ? Math.round(activeHeading).toString().padStart(3, '0') + '°' : '---°';
+          headingSecondary.textContent = activeHeading !== null ? cardinal.short : '--';
+          headingSecondary.classList.remove('hidden');
+        } else if (state.headingFormat === 'deg') {
+          headingFormatBadge.textContent = 'DEG ONLY';
+          headingPrimary.textContent = activeHeading !== null ? Math.round(activeHeading).toString().padStart(3, '0') + '°' : '---°';
+          headingSecondary.textContent = '';
+          headingSecondary.classList.add('hidden');
+        } else {
+          headingFormatBadge.textContent = 'CARDINAL';
+          headingPrimary.textContent = activeHeading !== null ? cardinal.short : '---';
+          headingSecondary.textContent = activeHeading !== null ? Math.round(activeHeading) + '°' : '';
+          headingSecondary.classList.remove('hidden');
+        }
+
+        if (activeHeading !== null) {
+          compassArrow.style.transform = `rotate(${Math.round(activeHeading)}deg)`;
+          headingCardinalFull.textContent = cardinal.full;
+          headingSubtext.textContent = effectiveSpeedMs >= 0.6
+            ? 'Live GNSS Course Over Ground'
+            : 'Last locked heading (stationary)';
+        } else {
+          headingCardinalFull.textContent = 'True North Ref';
+          headingSubtext.textContent = 'Move > 1.5 mph for GNSS course';
+        }
+        selectHeadingFormat.value = state.headingFormat;
+
+        // 3. Altitude
+        const isFeet = state.altUnit === 'ft';
+        const altFactor = isFeet ? 3.2808399 : 1.0;
+        const altLabel = isFeet ? 'FT' : 'M';
+
+        altUnitBadge.textContent = isFeet ? 'FEET (FT)' : 'METERS (M)';
+        altitudeUnitLabel.textContent = altLabel;
+
+        if (state.altitudeM !== null && !isNaN(state.altitudeM)) {
+          altitudeValue.textContent = Math.round(state.altitudeM * altFactor).toLocaleString();
+          altMaxVal.textContent = state.maxAltitudeM !== null ? Math.round(state.maxAltitudeM * altFactor) + ' ' + altLabel : '---';
+          altMinVal.textContent = state.minAltitudeM !== null ? Math.round(state.minAltitudeM * altFactor) + ' ' + altLabel : '---';
+        } else {
+          altitudeValue.textContent = '---';
+          altMaxVal.textContent = '---';
+          altMinVal.textContent = '---';
+        }
+
+        if (state.vertAccM !== null && !isNaN(state.vertAccM)) {
+          altitudeAccText.textContent = `Vert Acc: ±${Math.round(state.vertAccM * altFactor)} ${altLabel.toLowerCase()}`;
+        } else {
+          altitudeAccText.textContent = 'Vert Acc: ± ---';
+        }
+
+        if (state.horizAccM !== null && !isNaN(state.horizAccM)) {
+          accReadout.textContent = isFeet
+            ? `±${Math.round(state.horizAccM * 3.28084)} ft`
+            : `±${Math.round(state.horizAccM)} m`;
+        } else {
+          accReadout.textContent = '---';
+        }
+
+        if (state.lat !== null && state.lon !== null) {
+          coordsFooter.textContent = `${state.lat.toFixed(4)}°, ${state.lon.toFixed(4)}°`;
+        } else {
+          coordsFooter.textContent = 'LAT/LON: ---';
+        }
+
+        altUnitBtns.forEach(btn => {
+          const active = btn.getAttribute('data-alt-unit') === state.altUnit;
+          btn.classList.toggle('active-pill', active);
+          btn.classList.toggle('text-neutral-400', !active);
+        });
+        selectAltUnit.value = state.altUnit;
+
+        // Drift filter button
+        btnDriftFilter.textContent = state.driftFilter ? 'ON' : 'OFF';
+        btnDriftFilter.classList.toggle('active-pill', state.driftFilter);
+      }
+
+      // --- GNSS POSITION HANDLER ---
+      function handlePositionUpdate(pos, isSimulated) {
+        const now = Date.now();
+        const coords = pos.coords;
+
+        state.lat = coords.latitude;
+        state.lon = coords.longitude;
+        state.horizAccM = coords.accuracy;
+        state.vertAccM = coords.altitudeAccuracy;
+
+        // Speed determination: Prefer hardware GNSS Doppler speed (coords.speed)
+        let currentSpeedMs = coords.speed;
+        let currentHeading = coords.heading;
+        let source = isSimulated ? 'SIM' : 'DOPPLER';
+
+        if ((currentSpeedMs === null || currentSpeedMs === undefined || isNaN(currentSpeedMs)) && state.prevFix) {
+          const dtSec = (now - state.prevFix.time) / 1000;
+          if (dtSec > 0.2 && dtSec < 30) {
+            const geo = computeGeodesic(state.prevFix.lat, state.prevFix.lon, coords.latitude, coords.longitude);
+            // Only trust calculated speed if movement exceeds horizontal accuracy jitter
+            if (geo.distM > Math.max(1.5, (coords.accuracy || 5) * 0.35)) {
+              currentSpeedMs = geo.distM / dtSec;
+              if (currentHeading === null || isNaN(currentHeading)) {
+                currentHeading = geo.bearingDeg;
+              }
+              source = 'CALC';
+            } else {
+              currentSpeedMs = 0;
+            }
+          }
+        }
+
+        if (currentSpeedMs === null || currentSpeedMs === undefined || isNaN(currentSpeedMs) || currentSpeedMs < 0) {
+          currentSpeedMs = 0;
+        }
+
+        state.speedMs = currentSpeedMs;
+        state.speedSource = source;
+
+        const filteredSpeed = (state.driftFilter && currentSpeedMs < 0.45) ? 0 : currentSpeedMs;
+        if (filteredSpeed > state.maxSpeedMs) {
+          state.maxSpeedMs = filteredSpeed;
+        }
+
+        // Heading update
+        if (currentHeading !== null && currentHeading !== undefined && !isNaN(currentHeading) && filteredSpeed >= 0.5) {
+          state.headingDeg = ((currentHeading % 360) + 360) % 360;
+          state.lastValidHeadingDeg = state.headingDeg;
+        } else if (filteredSpeed < 0.5) {
+          state.headingDeg = null;
+        }
+
+        // Altitude update
+        if (coords.altitude !== null && coords.altitude !== undefined && !isNaN(coords.altitude)) {
+          state.altitudeM = coords.altitude;
+          if (state.minAltitudeM === null || coords.altitude < state.minAltitudeM) {
+            state.minAltitudeM = coords.altitude;
+          }
+          if (state.maxAltitudeM === null || coords.altitude > state.maxAltitudeM) {
+            state.maxAltitudeM = coords.altitude;
+          }
+        }
+
+        // Fix rate calculation
+        if (state.prevFix) {
+          const dt = now - state.prevFix.time;
+          if (dt > 50 && dt < 15000) {
+            state.fixIntervalsMs.push(dt);
+            if (state.fixIntervalsMs.length > 5) state.fixIntervalsMs.shift();
+            const avgMs = state.fixIntervalsMs.reduce((a, b) => a + b, 0) / state.fixIntervalsMs.length;
+            const hz = 1000 / avgMs;
+            fixRateText.textContent = `FIX: ${hz.toFixed(1)} Hz`;
+          }
+        }
+
+        state.prevFix = {
+          lat: coords.latitude,
+          lon: coords.longitude,
+          time: now
+        };
+
+        const d = new Date(now);
+        lastUpdateTime.textContent = 'LAST: ' + d.toLocaleTimeString([], { hour12: false });
+
+        // Update status indicator
+        if (isSimulated) {
+          gnssDot.className = 'w-2.5 h-2.5 rounded-full bg-cyan-400 pulse-live';
+          gnssStatusText.textContent = 'DEMO GNSS LOCK';
+        } else {
+          gnssDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 pulse-live';
+          gnssStatusText.textContent = 'GNSS 3D LOCK';
+        }
+
+        renderUI();
+      }
+
+      function handlePositionError(err) {
+        if (state.demoActive) return;
+        gnssDot.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
+        if (err && err.code === 1) {
+          gnssStatusText.textContent = 'LOCATION DENIED (TAP DEMO OR PERMIT)';
+        } else if (err && err.code === 2) {
+          gnssStatusText.textContent = 'GNSS UNAVAILABLE';
+        } else if (err && err.code === 3) {
+          gnssStatusText.textContent = 'GNSS TIMEOUT — RETRYING';
+        } else {
+          gnssStatusText.textContent = 'GNSS STANDBY (TAP TO START)';
+        }
+      }
+
+      function startGnssWatch() {
+        if (state.demoActive) return;
+        if (!('geolocation' in navigator)) {
+          gnssDot.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
+          gnssStatusText.textContent = 'NO GEOLOCATION API';
+          return;
+        }
+
+        if (state.watchId !== null) {
+          navigator.geolocation.clearWatch(state.watchId);
+          state.watchId = null;
+        }
+
+        gnssDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 pulse-live';
+        gnssStatusText.textContent = 'GNSS ACQUIRING...';
+
+        try {
+          state.watchId = navigator.geolocation.watchPosition(
+            (pos) => handlePositionUpdate(pos, false),
+            (err) => handlePositionError(err),
+            {
+              enableHighAccuracy: true,
+              maximumAge: 0,
+              timeout: 10000
+            }
+          );
+        } catch (e) {
+          handlePositionError(e);
+        }
+      }
+
+      // --- DEMO / SIMULATOR MODE ---
+      function toggleDemoMode(forceState) {
+        state.demoActive = typeof forceState === 'boolean' ? forceState : !state.demoActive;
+
+        if (state.demoActive) {
+          if (state.watchId !== null && 'geolocation' in navigator) {
+            navigator.geolocation.clearWatch(state.watchId);
+            state.watchId = null;
+          }
+          btnDemoMode.textContent = 'DEMO: ON';
+          btnDemoMode.classList.add('active-pill');
+          demoControlBar.classList.remove('hidden');
+
+          if (state.demoTimer) clearInterval(state.demoTimer);
+          state.demoTimer = setInterval(() => {
+            state.demoPhase += 0.08;
+            let simSpeedMs = parseFloat(demoSpeedSlider.value) || 28;
+            if (state.demoAutoCruise) {
+              // Smoothly cruise between ~22 m/s (49 mph) and ~34 m/s (76 mph)
+              simSpeedMs = 28.5 + Math.sin(state.demoPhase * 0.7) * 5.8 + Math.cos(state.demoPhase * 1.9) * 1.4;
+              demoSpeedSlider.value = simSpeedMs.toFixed(1);
+            }
+            const simHeading = (285 + Math.sin(state.demoPhase * 0.35) * 28 + 360) % 360;
+            const simAltM = 224 + Math.sin(state.demoPhase * 0.2) * 14;
+
+            handlePositionUpdate({
+              coords: {
+                latitude: 41.4169 + Math.sin(state.demoPhase * 0.05) * 0.01,
+                longitude: -87.3653 + Math.cos(state.demoPhase * 0.05) * 0.01,
+                speed: Math.max(0, simSpeedMs),
+                heading: simHeading,
+                altitude: simAltM,
+                accuracy: 3.2,
+                altitudeAccuracy: 4.5
+              }
+            }, true);
+          }, 250);
+
+          showToast('Demo GNSS Simulator Active');
+        } else {
+          if (state.demoTimer) {
+            clearInterval(state.demoTimer);
+            state.demoTimer = null;
+          }
+          btnDemoMode.textContent = 'DEMO: OFF';
+          btnDemoMode.classList.remove('active-pill');
+          demoControlBar.classList.add('hidden');
+          state.speedMs = 0;
+          state.prevFix = null;
+          renderUI();
+          startGnssWatch();
+          showToast('Live GNSS Receiver Active');
+        }
+      }
+
+      // --- SCREEN WAKE LOCK (ALWAYS-ON DISPLAY) ---
+      async function requestWakeLock() {
+        if (!state.wakeLockWanted) return;
+        if ('wakeLock' in navigator) {
+          try {
+            state.wakeLockSentinel = await navigator.wakeLock.request('screen');
+            state.wakeLockSentinel.addEventListener('release', () => {
+              updateWakeLockBadge();
+            });
+          } catch (e) {
+            // Wake lock might be disallowed in iframe until user gesture or fallback
+          }
+        }
+        updateWakeLockBadge();
+      }
+
+      async function toggleWakeLock() {
+        state.wakeLockWanted = !state.wakeLockWanted;
+        if (state.wakeLockWanted) {
+          await requestWakeLock();
+          showToast('Always-On Screen Lock Enabled');
+        } else {
+          if (state.wakeLockSentinel) {
+            try {
+              await state.wakeLockSentinel.release();
+            } catch (e) {}
+            state.wakeLockSentinel = null;
+          }
+          updateWakeLockBadge();
+          showToast('Always-On Screen Lock Disabled');
+        }
+      }
+
+      function updateWakeLockBadge() {
+        if (state.wakeLockWanted) {
+          btnWakeLock.classList.add('active-pill');
+          wakeLockText.textContent = 'ALWAYS ON';
+        } else {
+          btnWakeLock.classList.remove('active-pill');
+          wakeLockText.textContent = 'LOCK OFF';
+        }
+      }
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && state.wakeLockWanted) {
+          requestWakeLock();
+        }
+      });
+
+      // --- INTERACTIVE UNIT & FORMAT CYCLING ---
+      const SPEED_ORDER = ['mph', 'kmh', 'knots', 'ms'];
+      function cycleSpeedUnit() {
+        const nextIdx = (SPEED_ORDER.indexOf(state.speedUnit) + 1) % SPEED_ORDER.length;
+        state.speedUnit = SPEED_ORDER[nextIdx];
+        savePrefs();
+        renderUI();
+        showToast(`Speed Unit: ${SPEED_META[state.speedUnit].label}`);
+      }
+
+      function cycleAltitudeUnit() {
+        state.altUnit = state.altUnit === 'ft' ? 'm' : 'ft';
+        savePrefs();
+        renderUI();
+        showToast(`Altitude Unit: ${state.altUnit === 'ft' ? 'Feet (FT)' : 'Meters (M)'}`);
+      }
+
+      const HEADING_ORDER = ['both', 'deg', 'card'];
+      function cycleHeadingFormat() {
+        const nextIdx = (HEADING_ORDER.indexOf(state.headingFormat) + 1) % HEADING_ORDER.length;
+        state.headingFormat = HEADING_ORDER[nextIdx];
+        savePrefs();
+        renderUI();
+        const labels = { both: 'Degrees + Cardinal', deg: 'Degrees Only', card: 'Cardinal Direction' };
+        showToast(`Heading: ${labels[state.headingFormat]}`);
+      }
+
+      // --- EVENT LISTENERS ---
+      cardSpeed.addEventListener('click', (e) => {
+        if (e.target.closest('#btnResetMax') || e.target.closest('#btnDecimalToggle')) return;
+        cycleSpeedUnit();
+      });
+
+      cardSpeed.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          cycleSpeedUnit();
+        }
+      });
+
+      btnDecimalToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.showDecimals = !state.showDecimals;
+        savePrefs();
+        renderUI();
+        showToast(state.showDecimals ? 'Decimal precision (.0) ON' : 'Whole integer digits ON');
+      });
+
+      btnResetMax.addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.maxSpeedMs = 0;
+        renderUI();
+        showToast('Max speed reset');
+      });
+
+      cardHeading.addEventListener('click', () => {
+        cycleHeadingFormat();
+      });
+
+      cardHeading.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          cycleHeadingFormat();
+        }
+      });
+
+      cardAltitude.addEventListener('click', () => {
+        cycleAltitudeUnit();
+      });
+
+      cardAltitude.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          cycleAltitudeUnit();
+        }
+      });
+
+      speedUnitBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.speedUnit = btn.getAttribute('data-speed-unit');
+          savePrefs();
+          renderUI();
+          showToast(`Speed Unit: ${SPEED_META[state.speedUnit].label}`);
+        });
+      });
+
+      altUnitBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.altUnit = btn.getAttribute('data-alt-unit');
+          savePrefs();
+          renderUI();
+          showToast(`Altitude Unit: ${state.altUnit.toUpperCase()}`);
+        });
+      });
+
+      themeColorBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const color = btn.getAttribute('data-theme-color');
+          applyAccentColor(color);
+          showToast('OLED Accent Updated');
+        });
+      });
+
+      btnGnssToggle.addEventListener('click', () => {
+        if (state.demoActive) {
+          toggleDemoMode(false);
+        } else {
+          startGnssWatch();
+          showToast('Refreshing GNSS fix...');
+        }
+      });
+
+      btnWakeLock.addEventListener('click', () => {
+        toggleWakeLock();
+      });
+
+      btnDemoMode.addEventListener('click', () => {
+        toggleDemoMode();
+      });
+
+      btnDemoAuto.addEventListener('click', () => {
+        state.demoAutoCruise = !state.demoAutoCruise;
+        btnDemoAuto.classList.toggle('active-pill', state.demoAutoCruise);
+        btnDemoAuto.textContent = state.demoAutoCruise ? 'AUTO CRUISE' : 'MANUAL SLIDER';
+      });
+
+      demoSpeedSlider.addEventListener('input', () => {
+        state.demoAutoCruise = false;
+        btnDemoAuto.classList.remove('active-pill');
+        btnDemoAuto.textContent = 'MANUAL SLIDER';
+      });
+
+      btnMirrorHud.addEventListener('click', () => {
+        state.mirrored = !state.mirrored;
+        hudContainer.classList.toggle('hud-mirrored', state.mirrored);
+        btnMirrorHud.classList.toggle('active-pill', state.mirrored);
+        showToast(state.mirrored ? 'Windshield HUD Mirror ON' : 'Standard Display Orientation');
+      });
+
+      btnFullscreen.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          }
+        } else if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      });
+
+      btnOpenSettings.addEventListener('click', () => {
+        settingsModal.classList.remove('hidden');
+      });
+
+      btnCloseSettings.addEventListener('click', () => {
+        settingsModal.classList.add('hidden');
+      });
+
+      settingsModal.addEventListener('click', (e) => {
+        if (e.target === settingsModal) {
+          settingsModal.classList.add('hidden');
+        }
+      });
+
+      selectSpeedUnit.addEventListener('change', () => {
+        state.speedUnit = selectSpeedUnit.value;
+        savePrefs();
+        renderUI();
+      });
+
+      selectAltUnit.addEventListener('change', () => {
+        state.altUnit = selectAltUnit.value;
+        savePrefs();
+        renderUI();
+      });
+
+      selectHeadingFormat.addEventListener('change', () => {
+        state.headingFormat = selectHeadingFormat.value;
+        savePrefs();
+        renderUI();
+      });
+
+      btnDriftFilter.addEventListener('click', () => {
+        state.driftFilter = !state.driftFilter;
+        savePrefs();
+        renderUI();
+      });
+
+      // Download Standalone HTML for Pixel 9 Pro XL
+      btnDownloadHtml.addEventListener('click', () => {
+        const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'pixel9_gnss_speedometer.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        showToast('Downloaded pixel9_gnss_speedometer.html');
+      });
+
+      // --- DYNAMIC PWA MANIFEST & INSTALL PROMPT ---
+      function injectPwaManifest() {
+        try {
+          const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="110" fill="#000000"/><circle cx="256" cy="256" r="210" fill="none" stroke="#00ff66" stroke-width="18"/><text x="256" y="295" font-family="monospace" font-weight="bold" font-size="145" fill="#00ff66" text-anchor="middle">GPS</text></svg>`;
+          const iconUrl = 'data:image/svg+xml;base64,' + btoa(iconSvg);
+          const manifest = {
+            name: 'Pixel 9 Pro XL GNSS Speedometer',
+            short_name: 'GNSS HUD',
+            description: 'High-contrast OLED GNSS Speedometer, Heading and Altitude display',
+            start_url: '.',
+            display: 'standalone',
+            orientation: 'any',
+            background_color: '#000000',
+            theme_color: '#000000',
+            icons: [
+              { src: iconUrl, sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable' },
+              { src: iconUrl, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
+            ]
+          };
+          const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+          const link = document.createElement('link');
+          link.rel = 'manifest';
+          link.href = URL.createObjectURL(manifestBlob);
+          document.head.appendChild(link);
+        } catch (e) {}
+      }
+
+      let deferredPrompt = null;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        btnInstallPwaPrompt.classList.remove('hidden');
+      });
+
+      btnInstallPwaPrompt.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        btnInstallPwaPrompt.classList.add('hidden');
+      });
+
+      // Re-acquire wake lock on any first tap
+      document.addEventListener('click', () => {
+        if (state.wakeLockWanted && !state.wakeLockSentinel) {
+          requestWakeLock();
+        }
+      }, { passive: true });
+
+      // --- INITIALIZE ---
+      applyAccentColor(state.accentColor);
+      injectPwaManifest();
+      renderUI();
+      requestWakeLock();
+      startGnssWatch();
+    })();
+  </script>
+</body>
+</html>
